@@ -1,0 +1,10 @@
+{
+  "name": "cala",
+  "description": "Cala pre-processes the world's public information and serves it as structured data for AI agents. Query any real-world entity — companies, people, investors, founders, executives, funding rounds, acquisitions, industries, laws, regulations, countries, products, events, awards, financial metrics — and get typed, sourced JSON back instead of web pages to scrape. Built for due diligence, competitor mapping, market research, investor sourcing, regulatory analysis, and any workflow that needs verified external facts.",
+  "author": {
+    "name": "Cala",
+    "url": "https://cala.ai"
+  },
+  "homepage": "https://docs.cala.ai",
+  "keywords": ["knowledge", "research", "companies", "startups", "investors", "founders", "funding", "due-diligence", "acquisitions", "executives", "legal", "regulations", "laws", "geopolitical", "market-research", "competitor-analysis", "industries", "products", "events", "financial-metrics", "data"]
+}
