@@ -45,13 +45,14 @@ Cala is a pre-processed, structured index of the world's public data — query i
 Filter / list / "find all X where Y"?         → knowledge_query
 Open-ended "what", "who", "explain"?          → knowledge_search
 Look up entity by name / get UUID?            → entity_search (→ retrieve_entity)
-Have UUID, want fields?                       → retrieve_entity (pass `properties`)
-Have UUID, don't know what fields exist?      → entity_introspection (then retry)
+Have UUID, want whole blueprint?              → retrieve_entity (no body — default profile)
+Have UUID, want specific fields/rels/metrics? → entity_introspection → retrieve_entity (projected)
+Have UUID, don't know what's queryable?       → entity_introspection (then project)
 ```
 
 ⚠️ **Before using `entity_search` for brand-name companies:** See the critical disambiguation warning in the `entity_search + retrieve_entity` section below.
 
-Structured calls (`knowledge_query`, `retrieve_entity` with a `properties` projection) cost far fewer tokens than `knowledge_search` for the same fact. When the answer shape is known, go structured.
+Structured calls (`knowledge_query`, `retrieve_entity` with a field projection) cost far fewer tokens than `knowledge_search` for the same fact. When the answer shape is known, go structured. A projected `retrieve_entity` is the most token-efficient way to read a known entity — but you must run `entity_introspection` first to learn which fields, relationships, and metrics that specific entity exposes, since the queryable schema varies per entity.
 
 ## Access: MCP or REST
 
@@ -144,9 +145,23 @@ Facility · Location · Product · WorkOfArt · Law · Language
 
 `Organization` and `GPE` are parent types — filtering by a parent matches all sub-types.
 
-**Step 2 — `retrieve_entity`:** UUID → typed profile. Always pass a `properties` list — omitting it returns a limited default set that may be empty for some entity types.
+**Step 2 — `retrieve_entity`:** UUID → typed entity data, in **two modes**:
 
-**Relationships are NOT returned by default.** Request them explicitly in the body. Each relationship entity includes `properties.sources` with `name`, `document` (URL), and `date` (data freshness).
+- **Full profile (blueprint)** — call with no body. Returns the default property set (the entity's attribute blueprint), but **omits relationships and numerical observations**, and may be sparse for some types. Use only when a coarse profile is enough.
+- **Field projection** — pass an `EntityQuery` body naming exactly the fields, relationships, and metrics you want. The most token-efficient read, and the only way to get relationships or numerical observations. Run `entity_introspection` first to learn what this UUID exposes — projecting blind wastes round-trips.
+
+`EntityQuery` body — relationships and `numerical_observations` are returned only when requested; metric UUIDs come from introspection:
+
+```json
+{
+  "properties": ["legal_name", "founding_date", "employee_count"],
+  "relationships": {
+    "incoming": { "FOUNDED": { "limit": 10, "offset": 0 } },
+    "outgoing": { "IS_ULTIMATE_PARENT_OF": { "limit": 25 } }
+  },
+  "numerical_observations": { "FinancialMetric": ["<observation-uuid>"] }
+}
+```
 
 **Common relationship types:**
 
@@ -159,11 +174,17 @@ Facility · Location · Product · WorkOfArt · Law · Language
 | `IS_ULTIMATE_PARENT_OF` | outgoing | Direct subsidiaries | "What companies does X own?" |
 | `IS_DIRECT_OWNER_OF` | outgoing | Portfolio entities | "What's X's portfolio?" |
 
-Response shape: `properties` (each with `value` + `sources`), `relationships.incoming`, `relationships.outgoing`.
+Response shape: `properties` (each with `value` + `sources`), `relationships.incoming` / `relationships.outgoing` (each related entity carries `properties.sources` with `name`, `document` URL, and `date` freshness), and `numerical_observations` (keyed by type, time-series with origins).
 
 ## `entity_introspection` — schema discovery
 
-When you don't know what fields or relationships exist on an entity. Returns available `properties` and `relationships` for a given UUID. Most useful before a wide `retrieve_entity` call, and to confirm which relationships are populated before requesting them.
+When you don't know what is queryable on an entity. Given a UUID, returns three lists:
+
+- **`properties`** — the field names this entity exposes.
+- **`relationships`** — populated `outgoing` and `incoming` types.
+- **`numerical_observations`** — available metrics grouped by type, each with distinc properties. The `id`s are what you feed into a `retrieve_entity` projection.
+
+**This is the prerequisite for Mode B above.** Because the schema varies per entity, you can't write a correct field projection blind — introspect first, then project exactly what you need. It also confirms which relationships and metrics are actually populated, so you don't request empty ones.
 
 ## Handling failures
 
@@ -188,7 +209,8 @@ Broaden or simplify the query, or switch from `knowledge_query` to `knowledge_se
 | List / filter with conditions | `knowledge_query` |
 | Open-ended Q with citations | `knowledge_search` |
 | Name → UUID (fuzzy) | `entity_search` |
-| UUID → full / projected profile | `retrieve_entity` |
-| UUID → queryable schema | `entity_introspection` |
+| UUID → full profile (blueprint, properties only) | `retrieve_entity` (no body) |
+| UUID → specific fields, relationships, metrics | `entity_introspection` → `retrieve_entity` (projected) |
+| UUID → queryable schema (props, rels, metrics) | `entity_introspection` |
 
 Docs: <https://docs.cala.ai> · OpenAPI: <https://api.cala.ai/openapi.json> · MCP: <https://docs.cala.ai/integrations/mcp>
