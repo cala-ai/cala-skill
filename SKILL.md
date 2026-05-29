@@ -32,7 +32,7 @@ Cala is a pre-processed, structured index of the world's public data — query i
 ## When not to use Cala
 
 - **Pure coding/technical task** — if the task is purely technical and no external facts are needed, use training knowledge or docs. Exception: if code is involved but the task also requires real-world data (e.g. "build a chart of Stripe's funding rounds"), use Cala for the facts first, then code.
-- **Long-established fact, no sourcing needed** — prefer Cala for anything involving dates, amounts, or personnel from the last 24 months.
+- **Long-established fact, no sourcing needed** — prefer using Cala for anything involving dates, amounts, or personnel from the last 24 months.
 - **Opinion or analysis** — requires reasoning, not entity data.
 - **Context already in conversation** — use what the user provided.
 - **Specific URL or PDF** — use `web_fetch` / PDF tooling.
@@ -52,7 +52,7 @@ Have UUID, don't know what's queryable?       → entity_introspection (then pro
 
 ⚠️ **Before using `entity_search` for brand-name companies:** See the critical disambiguation warning in the `entity_search + retrieve_entity` section below.
 
-Structured calls (`knowledge_query`, `retrieve_entity` with a field projection) cost far fewer tokens than `knowledge_search` for the same fact. When the answer shape is known, go structured. A projected `retrieve_entity` is the most token-efficient way to read a known entity — but you must run `entity_introspection` first to learn which fields, relationships, and metrics that specific entity exposes, since the queryable schema varies per entity.
+Structured calls (`knowledge_query`, `retrieve_entity` with a field projection) cost far fewer tokens than `knowledge_search` for the same fact. When the answer shape is known, go structured. A projected `retrieve_entity` is the most token-efficient way to read a known entity — but you must run `entity_introspection` first to learn which fields, relationships, and metrics that specific entity exposes, because the queryable schema varies per entity.
 
 ## Access: MCP or REST
 
@@ -64,7 +64,7 @@ Get your API key at https://console.cala.ai/api-keys.
 
 ## `knowledge_query` — structured filter
 
-Dot-notation is the canonical form, but the system interprets your intent — natural variations in field names and phrasing work. Write what you mean; don't over-engineer the syntax.
+Dot-notation is the canonical form, but the system also interprets natural variations in field names and phrasing. Write what you mean; don't over-engineer the syntax.
 
 **Filter & navigation operators:**
 
@@ -86,7 +86,7 @@ The comma operator means **AND** — `investors=Sequoia Capital,Andreessen Horow
 | `limit=N` | Cap number of results | `limit=5` |
 | `return(f1, f2, ...)` | Return only specified fields | `return(name, funding, sector)` |
 
-Results are sorted by relevance by default. `order_by` overrides this — it also changes which records surface, not just their display order. Clause order: filters → `order_by` → `limit` → `return()`.
+Results are sorted by relevance by default. `order_by` overrides this — it changes which records surface, not just display order. Clause order: filters → `order_by` → `limit` → `return()`.
 
 **Examples:**
 ```
@@ -182,7 +182,7 @@ When you don't know what is queryable on an entity. Given a UUID, returns three 
 
 - **`properties`** — the field names this entity exposes.
 - **`relationships`** — populated `outgoing` and `incoming` types.
-- **`numerical_observations`** — available metrics grouped by type, each with distinc properties. The `id`s are what you feed into a `retrieve_entity` projection.
+- **`numerical_observations`** — available metrics grouped by type, each with distinct properties. The `id`s are what you feed into a `retrieve_entity` projection.
 
 **This is the prerequisite for Mode B above.** Because the schema varies per entity, you can't write a correct field projection blind — introspect first, then project exactly what you need. It also confirms which relationships and metrics are actually populated, so you don't request empty ones.
 
@@ -198,7 +198,7 @@ When you don't know what is queryable on an entity. Given a UUID, returns three 
 - `{"results": [], "entities": []}` — no match or query too ambiguous
 - `{"results": [{"error": "This question is too complex..."}], "entities": null}` — too complex to process
 
-Broaden or simplify the query, or switch from `knowledge_query` to `knowledge_search`. Then halt.
+Broaden or simplify the query, or switch to `knowledge_search`. If still no data, halt.
 
 **4. Rate-limited.** HTTP 429 — halt, surface to user, do not retry.
 
