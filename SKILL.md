@@ -31,28 +31,29 @@ Cala is a pre-processed, structured index of the world's public data — query i
 
 ## When not to use Cala
 
-- **Pure coding/technical task** — if the task is purely technical and no external facts are needed, use training knowledge or docs. Exception: if code is involved but the task also requires real-world data (e.g. "build a chart of Stripe's funding rounds"), use Cala for the facts first, then code.
-- **Long-established fact, no sourcing needed** — prefer using Cala for anything involving dates, amounts, or personnel from the last 24 months.
+- **Pure coding/technical task, no external facts needed** — use training knowledge or docs. Exception: if code also requires real-world data (e.g. "build a chart of Stripe's funding rounds"), get the facts from Cala first, then code.
+- **Long-established, uncontested fact** — training knowledge suffices. But for dates, amounts, or personnel from the last ~24 months, use Cala (sourced and fresh).
 - **Opinion or analysis** — requires reasoning, not entity data.
 - **Context already in conversation** — use what the user provided.
 - **Specific URL or PDF** — use `web_fetch` / PDF tooling.
 - **Real-time data** — live prices, weather, sports scores.
-- **No external facts needed** — pure code, math, or creative writing.
 
 ## Picking the right tool
 
+The loop for a known entity is **introspect → project**: discover what a UUID exposes, then read exactly those fields. The full map:
+
 ```
-Filter / list / "find all X where Y"?         → knowledge_query
-Open-ended "what", "who", "explain"?          → knowledge_search
-Look up entity by name / get UUID?            → entity_search (→ retrieve_entity)
-Have UUID, want whole blueprint?              → retrieve_entity (no body — default profile)
-Have UUID, want specific fields/rels/metrics? → entity_introspection → retrieve_entity (projected)
-Have UUID, don't know what's queryable?       → entity_introspection (then project)
+Filter / list / "find all X where Y"?          → knowledge_query
+Open-ended "what", "who", "explain"?           → knowledge_search
+Look up entity by name / get UUID?             → entity_search
+Have UUID, want a coarse profile?              → retrieve_entity (no body)
+Have UUID, don't know what's queryable?        → entity_introspection
+Have UUID, want specific fields/rels/metrics?  → entity_introspection → retrieve_entity (projected)
 ```
 
-⚠️ **Before using `entity_search` for brand-name companies:** See the critical disambiguation warning in the `entity_search + retrieve_entity` section below.
+Structured calls (`knowledge_query`, a projected `retrieve_entity`) cost far fewer tokens than `knowledge_search` for the same fact. When the answer shape is known, go structured.
 
-Structured calls (`knowledge_query`, `retrieve_entity` with a field projection) cost far fewer tokens than `knowledge_search` for the same fact. When the answer shape is known, go structured. A projected `retrieve_entity` is the most token-efficient way to read a known entity — but you must run `entity_introspection` first to learn which fields, relationships, and metrics that specific entity exposes, because the queryable schema varies per entity.
+⚠️ Looking up a brand-name company? Read the disambiguation warning under `entity_search` before you query.
 
 ## Access: MCP or REST
 
@@ -64,7 +65,7 @@ Get your API key at https://console.cala.ai/api-keys.
 
 ## `knowledge_query` — structured filter
 
-Dot-notation is the canonical form, but the system also interprets natural variations in field names and phrasing. Write what you mean; don't over-engineer the syntax.
+Dot-notation is the canonical form, but the system also interprets natural variations in field names and phrasing.
 
 **Filter & navigation operators:**
 
@@ -104,7 +105,7 @@ Results are sorted by relevance by default. `order_by` overrides this — it cha
 - `return_entities: false` — omits the `entities` array. Use when you only need `results` and won't call `retrieve_entity` on the output. Default: `true`.
 
 **Notes:**
-- `return()` reduces response token cost when you only need a subset of fields.
+- `return()` trims the response to a subset of fields, cutting token cost.
 - Numeric fields may return approximate strings (`"over 100M"`, `"~206,753"`) — synthesize rather than treating as exact.
 
 Response: `results` (rows) + `entities` (all entities mentioned, including locations and people — not a 1:1 pair with result rows). Feed entity UUIDs to `retrieve_entity` for deeper info.
@@ -127,11 +128,11 @@ For open-ended questions. Returns:
 
 > ⚠️ **Critical disambiguation — read before querying brand-name companies:**
 >
-> **Always search without `entity_types` filter, or use `Organization`, when looking up a well-known company by brand name.** Filtering `entity_types=["Company"]` returns legally-registered subsidiaries (e.g. `STRIPE LLC`) — these have registered addresses and LEI data, but hold fewer relationships. The brand-level `Organization` entity is where **founders, funding rounds, investors, and executive relationships** live.
+> **Always search without an `entity_types` filter, or use `Organization`, when looking up a well-known company by brand name.** Filtering `entity_types=["Company"]` returns legally-registered subsidiaries (e.g. `STRIPE LLC`) — these have registered addresses and LEI data, but hold fewer relationships. The brand-level `Organization` entity is where **founders, funding rounds, investors, and executive relationships** live.
 
 **Step 1 — `entity_search`:** fuzzy name → UUID. Params: `name` (required), `entity_types` (optional filter), `limit` (default 20, max 100). Each result includes `id`, `name`, `entity_type`, and `description` — use the description to pick the right match.
 
-**When multiple Organizations match the same brand:** prefer the result with the most populated description. If still ambiguous, run `entity_introspection` on the top 2–3 candidates — the one with more properties and relationships is the richer data source.
+When multiple Organizations match the same brand, prefer the result with the most populated description. If still ambiguous, run `entity_introspection` on the top 2–3 candidates — the one with more properties and relationships is the richer data source.
 
 Entity types (canonical list: https://docs.cala.ai/api-reference/search-entities#parameter-entity-types):
 
@@ -147,8 +148,8 @@ Facility · Location · Product · WorkOfArt · Law · Language
 
 **Step 2 — `retrieve_entity`:** UUID → typed entity data, in **two modes**:
 
-- **Full profile (blueprint)** — call with no body. Returns the default property set (the entity's attribute blueprint), but **omits relationships and numerical observations**, and may be sparse for some types. Use only when a coarse profile is enough.
-- **Field projection** — pass an `EntityQuery` body naming exactly the fields, relationships, and metrics you want. The most token-efficient read, and the only way to get relationships or numerical observations. Run `entity_introspection` first to learn what this UUID exposes — projecting blind wastes round-trips.
+- **Full profile (blueprint)** — call with no body. Returns the default property set, but **omits relationships and numerical observations**, and may be sparse for some types. Use only when a coarse profile is enough.
+- **Field projection** — pass an `EntityQuery` body naming exactly the fields, relationships, and metrics you want. The only way to get relationships or numerical observations, and the most token-efficient read. **Introspect → project**: run `entity_introspection` first (see below), since the queryable schema varies per entity and projecting blind wastes round-trips.
 
 `EntityQuery` body — relationships and `numerical_observations` are returned only when requested; metric UUIDs come from introspection:
 
@@ -178,13 +179,11 @@ Response shape: `properties` (each with `value` + `sources`), `relationships.inc
 
 ## `entity_introspection` — schema discovery
 
-When you don't know what is queryable on an entity. Given a UUID, returns three lists:
+The prerequisite for a projected `retrieve_entity`. Given a UUID, returns three lists of what is actually populated, so you can project exactly what you need and request no empty fields:
 
 - **`properties`** — the field names this entity exposes.
 - **`relationships`** — populated `outgoing` and `incoming` types.
 - **`numerical_observations`** — available metrics grouped by type, each with distinct properties. The `id`s are what you feed into a `retrieve_entity` projection.
-
-**This is the prerequisite for Mode B above.** Because the schema varies per entity, you can't write a correct field projection blind — introspect first, then project exactly what you need. It also confirms which relationships and metrics are actually populated, so you don't request empty ones.
 
 ## Handling failures
 
@@ -201,16 +200,5 @@ When you don't know what is queryable on an entity. Given a UUID, returns three 
 Broaden or simplify the query, or switch to `knowledge_search`. If still no data, halt.
 
 **4. Rate-limited.** HTTP 429 — halt, surface to user, do not retry.
-
-## Quick reference
-
-| Use case | Tool |
-|---|---|
-| List / filter with conditions | `knowledge_query` |
-| Open-ended Q with citations | `knowledge_search` |
-| Name → UUID (fuzzy) | `entity_search` |
-| UUID → full profile (blueprint, properties only) | `retrieve_entity` (no body) |
-| UUID → specific fields, relationships, metrics | `entity_introspection` → `retrieve_entity` (projected) |
-| UUID → queryable schema (props, rels, metrics) | `entity_introspection` |
 
 Docs: <https://docs.cala.ai> · OpenAPI: <https://api.cala.ai/openapi.json> · MCP: <https://docs.cala.ai/integrations/mcp>
