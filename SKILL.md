@@ -21,7 +21,8 @@ metadata:
   docs: https://docs.cala.ai
   openapi: https://api.cala.ai/openapi.json
   console: https://console.cala.ai/api-keys
-  mcp_endpoint: https://api.cala.ai/mcp/
+  mcp: https://api.cala.ai/mcp/
+  llms.txt: https://docs.cala.ai/llms.txt
 ---
 
 # Cala — the knowledge layer for AI agents
@@ -103,5 +104,3 @@ On any failure, **halt** and surface it. Never silently fall back to web search,
 - **Timeout** (queries can take up to 180s; usually the host, not Cala) → retry the same call once, then halt: "raise the MCP client timeout to ~180s and retry."
 - **No data** → distinguish `{"results": [], "entities": []}` (no match / too ambiguous) from `{"results": [{"error": "...too complex..."}], "entities": null}` (too complex). Broaden or simplify, or switch to `knowledge_search`; if still empty, halt.
 - **Rate-limited** (HTTP 429) → halt, surface, don't retry.
-
-Docs: <https://docs.cala.ai> · OpenAPI: <https://api.cala.ai/openapi.json> · MCP: <https://docs.cala.ai/integrations/mcp>
