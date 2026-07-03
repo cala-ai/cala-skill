@@ -43,12 +43,12 @@ This skill assumes the Cala tools are loaded (their schemas carry the params and
 Filter / list / "find all X where Y"?          → knowledge_query
 Open-ended "what", "who", "explain"?           → knowledge_search
 Have a name, want the entity (a seed UUID)?    → entity_search
-Have a UUID, want a coarse profile?            → retrieve_entity (no body)
+Have a UUID, want a coarse profile?            → entity_retrieval (no body)
 Have a UUID, don't know what's queryable?      → entity_introspection
-Have a UUID, want specific fields/rels/metrics → entity_introspection → retrieve_entity
+Have a UUID, want specific fields/rels/metrics → entity_introspection → entity_retrieval
 ```
 
-**Go structured.** `knowledge_query` and a projected `retrieve_entity` cost far fewer tokens and behave more predictably than `knowledge_search`. When you know the shape of the answer, take the structured path; reach for `knowledge_search` only for genuinely open-ended questions.
+**Go structured.** `knowledge_query` and a projected `entity_retrieval` cost far fewer tokens and behave more predictably than `knowledge_search`. When you know the shape of the answer, take the structured path; reach for `knowledge_search` only for genuinely open-ended questions.
 
 ## `knowledge_query` — structured filter
 
@@ -68,13 +68,13 @@ A dot-notation query language. Read each `.` as one **hop** across the graph: `O
 {"input": "companies.sector=climate tech.funding_round.series=A,B.location=Southern Europe.return(name, funding, investors)"}
 ```
 
-Returns `results` (rows) + `entities` (everything mentioned — locations, people, not 1:1 with rows). Feed entity UUIDs to `retrieve_entity` to go deeper.
+Returns `results` (rows) + `entities` (everything mentioned — locations, people, not 1:1 with rows). Feed entity UUIDs to `entity_retrieval` to go deeper.
 
-## Named entities — `entity_search` → `retrieve_entity`
+## Named entities — `entity_search` → `entity_retrieval`
 
 **Resolve a name to a seed entity** with `entity_search` (fuzzy name → UUID; each hit carries `name`, `entity_type`, `description` — use the description to pick).
 
-From the seed UUID, `retrieve_entity` reads in two modes:
+From the seed UUID, `entity_retrieval` reads in two modes:
 
 - **Coarse profile** — no body; default properties only, no relationships or numerical observations.
 - **Projection** — a body naming exact `properties`, `relationships`, and `numerical_observations`; the only way to get relationships or time-series, and the leanest read.
