@@ -16,7 +16,7 @@ description: >-
   in context.
 compatibility: Requires a Cala API key (console.cala.ai/api-keys) and internet access.
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
   homepage: https://cala.ai
   docs: https://docs.cala.ai
   openapi: https://api.cala.ai/openapi.json
@@ -43,6 +43,7 @@ This skill assumes the Cala tools are loaded (their schemas carry the params and
 Filter / list / "find all X where Y"?          → knowledge_query
 Open-ended "what", "who", "explain"?           → knowledge_search
 Have a name, want the entity (a seed UUID)?    → entity_search
+Have an identifier (LEI, CIK, SIREN, …)?       → entity_lookup
 Have a UUID, want a coarse profile?            → entity_retrieval (no body)
 Have a UUID, don't know what's queryable?      → entity_introspection
 Have a UUID, want specific fields/rels/metrics → entity_introspection → entity_retrieval
@@ -70,9 +71,11 @@ A dot-notation query language. Read each `.` as one **hop** across the graph: `O
 
 Returns `results` (rows) + `entities` (everything mentioned — locations, people, not 1:1 with rows). Feed entity UUIDs to `entity_retrieval` to go deeper.
 
-## Named entities — `entity_search` → `entity_retrieval`
+## Named entities — `entity_search` / `entity_lookup` → `entity_retrieval`
 
 **Resolve a name to a seed entity** with `entity_search` (fuzzy name → UUID; each hit carries `name`, `entity_type`, `description` — use the description to pick).
+
+**Resolve an external identifier** with `entity_lookup` when you already have an indexed Ontology id such as LEI, CIK, SIREN, RSSD, or UK Companies House number. Exact match (not fuzzy). Pass exactly one scheme — either nested (`{"id": {"lei": "95980020140005017502"}}`) or as a top-level shorthand (`{"lei": "95980020140005017502"}`). Returns the same stub shape as `entity_search` (`id`, `name`, `entity_type`, `description`). Prefer this over `entity_search` when you have the identifier; use `entity_retrieval` once you have the UUID.
 
 From the seed UUID, `entity_retrieval` reads in two modes:
 
