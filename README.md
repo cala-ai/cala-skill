@@ -79,14 +79,15 @@ Full spec: https://api.cala.ai/openapi.json
 
 ## Tools
 
-Once connected, your agent has access to five tools:
+Once connected, your agent has access to six tools:
 
 | Tool | Use |
 |------|-----|
 | `knowledge_query` | Filter and list entities by criteria |
 | `knowledge_search` | Open-ended questions with cited answers |
 | `entity_search` | Fuzzy name → UUID lookup |
-| `retrieve_entity` | UUID → full structured profile |
+| `entity_lookup` | External identifier (LEI, CIK, SIREN, NIF, …) → entity, exact match |
+| `entity_retrieval` | UUID → full structured profile |
 | `entity_introspection` | Discover available fields for an entity |
 
 ## Links
