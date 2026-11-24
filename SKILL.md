@@ -16,7 +16,7 @@ description: >-
   in context.
 compatibility: Requires a Cala API key (console.cala.ai/api-keys) and internet access.
 metadata:
-  version: "1.2.0"
+  version: "1.2.2"
   homepage: https://cala.ai
   docs: https://docs.cala.ai
   openapi: https://api.cala.ai/openapi.json
