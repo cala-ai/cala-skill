@@ -43,7 +43,7 @@ This skill assumes the Cala tools are loaded (their schemas carry the params and
 Filter / list / "find all X where Y"?          → knowledge_query
 Open-ended "what", "who", "explain"?           → knowledge_search
 Have a name, want the entity (a seed UUID)?    → entity_search
-Have an identifier (LEI, CIK, NCT id, MONDO, HGNC, ROR, …)? → entity_lookup
+Have an identifier (LEI, CIK, NCT id, MONDO, HGNC, ROR, UniProt, …)? → entity_lookup
 Have a UUID, want a coarse profile?            → entity_retrieval (no body)
 Have a UUID, don't know what's queryable?      → entity_introspection
 Have a UUID, want specific fields/rels/metrics → entity_introspection → entity_retrieval
@@ -75,7 +75,7 @@ Returns `results` (rows) + `entities` (everything mentioned — locations, peopl
 
 **Resolve a name to a seed entity** with `entity_search` (fuzzy name → UUID; each hit carries `name`, `entity_type`, `description` — use the description to pick).
 
-**Resolve an external identifier** with `entity_lookup` when you already have an identifier. Exact match (not fuzzy). Pass the scheme as the query param name, its value as the query param value (`GET /entities/lookup?lei=95980020140005017502`) — exactly one param per request. Declared schemes, each a dedicated, uniquely-indexed property: `lei`, `cik`, `rssd_id`, `companies_house_uk_id`, `siren`, `nif`, `nct_id`, `ctis_id`, `eudract_id`, `mondo_id`, `fda_application_id`, `ema_application_id`, `hgnc_id`, `atc_code`, `patent_id`, `pubmed_id`, `ror_id`. Returns `entity` (same shape as an `entity_search` hit) or `null`; no match is `entity: null`, not an error — the identifier is external and may simply not resolve to anything. Prefer this over `entity_search` when you have the identifier; use `entity_retrieval` once you have the UUID.
+**Resolve an external identifier** with `entity_lookup` when you already have an identifier. Exact match (not fuzzy). Pass the scheme as the query param name, its value as the query param value (`GET /entities/lookup?lei=95980020140005017502`) — exactly one param per request. Declared schemes, each a dedicated, uniquely-indexed property: `lei`, `cik`, `rssd_id`, `companies_house_uk_id`, `siren`, `nif`, `nct_id`, `ctis_id`, `eudract_id`, `mondo_id`, `fda_application_id`, `ema_application_id`, `hgnc_id`, `atc_code`, `patent_id`, `pubmed_id`, `ror_id`, `uniprot_id`, `chembl_molecule_id`, `orphanet_id` (`ORPHA:558`, `Orphanet_558` or `558`). Returns `entity` (same shape as an `entity_search` hit) or `null`; no match is `entity: null`, not an error — the identifier is external and may simply not resolve to anything. Prefer this over `entity_search` when you have the identifier; use `entity_retrieval` once you have the UUID.
 
 From the seed UUID, `entity_retrieval` reads in two modes:
 
